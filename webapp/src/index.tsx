@@ -16,9 +16,21 @@ interface PostData {
     likes_num?: number;
 };
 
+interface LikesData {
+    id?: number;
+    user?: string;
+    msgId?: number;
+};
+
 interface PostFormState {
     privateKey: string;
     data: PostData;
+    error: string;
+};
+
+interface LikesFormState {
+    privateKey: string;
+    data: LikesData;
     error: string;
 };
 
@@ -109,18 +121,100 @@ class PostForm extends React.Component<{}, PostFormState> {
                             onChange={e => this.setData({ content: e.target.value })}
                         /></td>
                     </tr>
-                    <tr>
-                        <td>Likes_Num</td>
+                </tbody>
+            </table>
+            <br />
+            <button onClick={e => this.post()}>Post</button>
+            {this.state.error && <div>
+                <br />
+                Error:
+                <code><pre>{this.state.error}</pre></code>
+            </div>}
+        </div>;
+    }
+}
+
+class LikesForm extends React.Component<{}, LikesFormState> {
+    api: Api;
+
+    constructor(props: {}) {
+        super(props);
+        this.api = new Api({ rpc, signatureProvider: new JsSignatureProvider([]) });
+        this.state = {
+            privateKey: '5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3',
+            data: {
+                id: 0,
+                user: 'bob',
+                msgId: 0,
+            },
+            error: '',
+        };
+    }
+
+    setData(data: LikesData) {
+        this.setState({ data: { ...this.state.data, ...data } });
+    }
+
+    async like() {
+        try {
+            this.api.signatureProvider = new JsSignatureProvider([this.state.privateKey]);
+            const result = await this.api.transact(
+                {
+                    actions: [{
+                        account: 'talk',
+                        name: 'like',
+                        authorization: [{
+                            actor: this.state.data.user,
+                            permission: 'active',
+                        }],
+                        data: this.state.data,
+                    }]
+                }, {
+                    blocksBehind: 3,
+                    expireSeconds: 30,
+                });
+            console.log(result);
+            this.setState({ error: '' });
+        } catch (e) {
+            if (e.json)
+                this.setState({ error: JSON.stringify(e.json, null, 4) });
+            else
+                this.setState({ error: '' + e });
+        }
+    }
+
+    render() {
+        return <div>
+            <table>
+                <tbody>
+                    {/* <tr>
+                        <td>Private Key</td>
                         <td><input
                             style={{ width: 500 }}
-                            value={this.state.data.likes_num}
-                            onChange={e => this.setData({ likes_num: +e.target.value })}
+                            value={this.state.privateKey}
+                            onChange={e => this.setState({ privateKey: e.target.value })}
+                        /></td>
+                    </tr> */}
+                    <tr>
+                        <td>User</td>
+                        <td><input
+                            style={{ width: 200 }}
+                            value={this.state.data.user}
+                            onChange={e => this.setData({ user: e.target.value })}
+                        /></td>
+                    </tr>
+                    <tr>
+                        <td>Message ID</td>
+                        <td><input
+                            style={{ width: 200 }}
+                            value={this.state.data.msgId}
+                            onChange={e => this.setData({ msgId: +e.target.value })}
                         /></td>
                     </tr>
                 </tbody>
             </table>
             <br />
-            <button onClick={e => this.post()}>Post</button>
+            <button onClick={e => this.like()}>Like / Unlike</button>
             {this.state.error && <div>
                 <br />
                 Error:
@@ -174,12 +268,59 @@ class Messages extends React.Component<{}, { content: string }> {
     }
 }
 
+class Likes extends React.Component<{}, { content: string }> {
+    interval: number;
+
+    constructor(props: {}) {
+        super(props);
+        this.state = { content: '///' };
+    }
+
+    componentDidMount() {
+        this.interval = window.setInterval(async () => {
+            try {
+                const rows = await rpc.get_table_rows({
+                    json: true, code: 'talk', scope: '', table: 'msglikes', limit: 1000,
+                });
+                let content =
+                    'id          user          msgId\n' +
+                    '===============================================================================\n';
+                for (let row of rows.rows)
+                    content +=
+                        (row.id + '').padEnd(12) +
+                        row.user.padEnd(14) +
+                        (row.msgId + '').padEnd(12) + '\n';
+                this.setState({ content });
+            } catch (e) {
+                if (e.json)
+                    this.setState({ content: JSON.stringify(e.json, null, 4) });
+                else
+                    this.setState({ content: '' + e });
+            }
+
+        }, 200);
+    }
+
+    componentWillUnmount() {
+        clearInterval(this.interval);
+    }
+
+    render() {
+        return <code><pre>{this.state.content}</pre></code>;
+    }
+}
+
 ReactDOM.render(
     <div>
         <PostForm />
-        <br />
+        <br /> <br />
+        <LikesForm />
+        <br /> <br />
         Messages:
         <Messages />
+        <br />
+        Likes:
+        <Likes />
     </div>,
     document.getElementById("example")
 );

@@ -11,7 +11,7 @@ using namespace fc;
 
 BOOST_AUTO_TEST_SUITE(talk_tests)
 
-BOOST_AUTO_TEST_CASE(post) try {
+BOOST_AUTO_TEST_CASE(post_and_like) try {
     tester t{setup_policy::none};
 
     // Load contract
@@ -61,6 +61,24 @@ BOOST_AUTO_TEST_CASE(post) try {
         ("content", "post 3: reply") //
     );
 
+    //Test "like" action
+    t.push_action(
+        N(talk), N(like), N(jane),
+        mutable_variant_object //
+        ("id", 1)              //
+        ("msgId", 1)        //
+        ("user", "jane")       //
+    );
+
+    // Unlike
+    t.push_action(
+        N(talk), N(like), N(jane),
+        mutable_variant_object //
+        ("id", 2)              //
+        ("msgId", 1)        //
+        ("user", "jane")       //
+    );
+
     // Can't reply to non-existing message
     BOOST_CHECK_THROW(
         [&] {
@@ -71,6 +89,32 @@ BOOST_AUTO_TEST_CASE(post) try {
                 ("reply_to", 99)             //
                 ("user", "john")             //
                 ("content", "post 3: reply") //
+            );
+        }(),
+        fc::exception);
+
+    // Can't like non-existing message
+    BOOST_CHECK_THROW(
+        [&] {
+            t.push_action(
+                N(talk), N(like), N(jane),
+                mutable_variant_object //
+                ("id", 1)              //
+                ("msgId", 99)        //
+                ("user", "jane")       //
+            );
+        }(),
+        fc::exception);
+
+    // Can't like her/his own post
+    BOOST_CHECK_THROW(
+        [&] {
+            t.push_action(
+                N(talk), N(like), N(jane),
+                mutable_variant_object //
+                ("id", 2)              //
+                ("msgId", 1)        //
+                ("user", "jane")       //
             );
         }(),
         fc::exception);

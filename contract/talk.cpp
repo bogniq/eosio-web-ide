@@ -2,10 +2,11 @@
 
 // Message table
 struct [[eosio::table("message"), eosio::contract("talk")]] message {
-    uint64_t    id       = {}; // Non-0
-    uint64_t    reply_to = {}; // Non-0 if this is a reply
-    eosio::name user     = {};
-    std::string content  = {};
+    uint64_t    id          = {}; // Non-0
+    uint64_t    reply_to    = {}; // Non-0 if this is a reply
+    eosio::name user        = {};
+    std::string content     = {};
+    uint64_t    likes_num   = {};
 
     uint64_t primary_key() const { return id; }
     uint64_t get_reply_to() const { return reply_to; }
@@ -65,7 +66,6 @@ class talk : eosio::contract {
     }
 
     // Like a message
-    // (1) a user can't like a post for more than one time; 
     // (2) a user can't like her/his own post;
     [[eosio::action]] void like(uint64_t id, uint64_t msgId, eosio::name user) {
         // Check user
@@ -80,39 +80,34 @@ class talk : eosio::contract {
         eosio::check( itr != msgs.end(), "message does not exist in table" );
 
         // Check msgId was not posted by user
-        eosio::check( itr->user != user, "message was posted by this user her/himself");
+        eosio::check( itr->user != user, "message can't be liked by its poster");
 
-        // Check user hasn't liked msgId
-        for (auto& item : likes) {
-            eosio::check( item.user != user, "this user has already liked the message" ); // TODO: is it good to use `check()` within a loop
-        }
-
-        // Record the message
-        likes.emplace(get_self(), [&](auto& msglikes) {
-            msglikes.id     = id;
-            msglikes.user   = user;
-            msglikes.msgId  = msgId;
-        });
-    }
-
-    // Unlike a message
-    [[eosio::action]] void unlike(uint64_t id, uint64_t msgId, eosio::name user) {
-        // Check user
-        require_auth(user);        
-
-        eosio::check(id < 1'000'000'000ull, "user-specified id is too big");
-        if (!id)
-            id = std::max(likes.available_primary_key(), 1'000'000'000ull);
-
-        // Check user has liked msgId
+        // If a user has already liked a post, like it again is deemed as unlike
         bool liked = false;
         for (auto& item : likes) {
             if (item.msgId == msgId && item.user == user) {
                 liked = true;
                 likes.erase(item);
+                msgs.modify(itr, user, [&]( auto& message ) {
+                    message.likes_num--;
+                });
                 break;
             }
         }
-        eosio::check(liked, "this message doesn't exist, OR this user hasn't liked the message");
+
+        if (!liked) {
+            // Record the message
+            likes.emplace(get_self(), [&](auto& msglikes) {
+                msglikes.id     = id;
+                msglikes.user   = user;
+                msglikes.msgId  = msgId;
+            });
+            msgs.modify(itr, user, [&]( auto& message ) {
+                message.likes_num++;
+            });
+        }
     }
+//   private:
+//     message_table msgs;
+//     likes_table likes;
 };

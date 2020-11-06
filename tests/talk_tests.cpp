@@ -33,6 +33,17 @@ BOOST_AUTO_TEST_CASE(post) try {
         ("user", "john")       //
         ("content", "post 1")  //
     );
+
+    // t.produce_block();
+    // t.push_action(
+    //     N(talk), N(post), N(john),
+    //     mutable_variant_object //
+    //     ("id", 1)              //
+    //     ("reply_to", 0)        //
+    //     ("user", "john")       //
+    //     ("content", "post 1")  //
+    // );
+
     t.push_action(
         N(talk), N(post), N(jane),
         mutable_variant_object //

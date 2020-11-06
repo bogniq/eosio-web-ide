@@ -13,7 +13,7 @@ interface PostData {
     user?: string;
     reply_to?: number;
     content?: string;
-    like_to?: number;
+    likes_num?: number;
 };
 
 interface PostFormState {
@@ -34,7 +34,7 @@ class PostForm extends React.Component<{}, PostFormState> {
                 id: 0,
                 user: 'bob',
                 reply_to: 0,
-                like_to: 0,
+                likes_num: 0,
                 content: 'This is a test'
             },
             error: '',
@@ -102,19 +102,19 @@ class PostForm extends React.Component<{}, PostFormState> {
                         /></td>
                     </tr>
                     <tr>
-                        <td>Likes</td>
-                        <td><input
-                            style={{ width: 500 }}
-                            value={this.state.data.like_to}
-                            onChange={e => this.setData({ like_to: +e.target.value })}
-                        /></td>
-                    </tr>
-                    <tr>
                         <td>Content</td>
                         <td><input
                             style={{ width: 500 }}
                             value={this.state.data.content}
                             onChange={e => this.setData({ content: e.target.value })}
+                        /></td>
+                    </tr>
+                    <tr>
+                        <td>Likes_Num</td>
+                        <td><input
+                            style={{ width: 500 }}
+                            value={this.state.data.likes_num}
+                            onChange={e => this.setData({ likes_num: +e.target.value })}
                         /></td>
                     </tr>
                 </tbody>
@@ -145,13 +145,13 @@ class Messages extends React.Component<{}, { content: string }> {
                     json: true, code: 'talk', scope: '', table: 'message', limit: 1000,
                 });
                 let content =
-                    'id          reply_to      likes         user          content\n' +
-                    '===========================================================================\n';
+                    'id          likes         reply_to      user          content\n' +
+                    '===============================================================================\n';
                 for (let row of rows.rows)
                     content +=
                         (row.id + '').padEnd(12) +
+                        (row.likes_num + '').padEnd(12) + '  ' +
                         (row.reply_to + '').padEnd(12) + '  ' +
-                        (row.like_to + '').padEnd(12) + '  ' +
                         row.user.padEnd(14) +
                         row.content + '\n';
                 this.setState({ content });

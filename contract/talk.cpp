@@ -40,15 +40,12 @@ class talk : eosio::contract {
 
     // Post a message
     [[eosio::action]] void post(uint64_t id, uint64_t reply_to, eosio::name user, const std::string& content) {
-        //message_table table{get_self(), 0};
-
         // Check user
         require_auth(user);
 
         // Check reply_to exists
         if (reply_to)
             msgs.get(reply_to);
-            //table.get(reply_to);
 
         // Create an ID if user didn't specify one
         eosio::check(id < 1'000'000'000ull, "user-specified id is too big");
@@ -65,8 +62,7 @@ class talk : eosio::contract {
         });
     }
 
-    // Like a message
-    // (2) a user can't like her/his own post;
+    // Like & Unlike a message
     [[eosio::action]] void like(uint64_t id, uint64_t msgId, eosio::name user) {
         // Check user
         require_auth(user);        
@@ -82,13 +78,13 @@ class talk : eosio::contract {
         // Check msgId was not posted by user
         eosio::check( itr->user != user, "message can't be liked by its poster");
 
-        // If a user has already liked a post, like it again is deemed as unlike
+        // If a user has already liked a post, liking it again is treated as unlike
         bool liked = false;
         for (auto& item : likes) {
             if (item.msgId == msgId && item.user == user) {
                 liked = true;
                 likes.erase(item);
-                msgs.modify(itr, user, [&]( auto& message ) {
+                msgs.modify(itr, user, [&](auto& message) {
                     message.likes_num--;
                 });
                 break;
@@ -102,12 +98,9 @@ class talk : eosio::contract {
                 msglikes.user   = user;
                 msglikes.msgId  = msgId;
             });
-            msgs.modify(itr, user, [&]( auto& message ) {
+            msgs.modify(itr, user, [&](auto& message) {
                 message.likes_num++;
             });
         }
     }
-//   private:
-//     message_table msgs;
-//     likes_table likes;
 };

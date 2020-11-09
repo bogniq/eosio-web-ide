@@ -15,17 +15,21 @@ struct [[eosio::table("message"), eosio::contract("talk")]] message {
 using message_table = eosio::multi_index<"message"_n, message, 
     eosio::indexed_by<"by.reply.to"_n, eosio::const_mem_fun<message, uint64_t, &message::get_reply_to>>>;
 
+static uint128_t create_key(uint64_t msgId, const eosio::name &user) {
+    return uint128_t{msgId} << 64 | user.value;
+}
+
 struct [[eosio::table("msglikes"), eosio::contract("talk")]] msglikes {
     uint64_t    id      = {}; // Non-0
     uint64_t    msgId   = {}; // Non-0
     eosio::name user    = {};
 
     uint64_t primary_key() const { return id; }
-    uint64_t get_msgId() const { return msgId; }
+    uint128_t secondary_key() const { return create_key(msgId, user); }
 };
 
 using likes_table = eosio::multi_index<"msglikes"_n, msglikes, 
-    eosio::indexed_by<"by.msgid"_n, eosio::const_mem_fun<msglikes, uint64_t, &msglikes::get_msgId>>>;
+    eosio::indexed_by<"by.secondary"_n, eosio::const_mem_fun<msglikes, uint128_t, &msglikes::secondary_key>>>;
 
 // The contract
 class talk : eosio::contract {
@@ -72,35 +76,29 @@ class talk : eosio::contract {
             id = std::max(likes.available_primary_key(), 1'000'000'000ull);
         
         // Check msgId exists
-        auto itr = msgs.find(msgId);
-        eosio::check( itr != msgs.end(), "message does not exist in table" );
+        auto it_msgs = msgs.find(msgId);
+        eosio::check( it_msgs != msgs.end(), "message does not exist in table" );
 
         // Check msgId was not posted by user
-        eosio::check( itr->user != user, "message can't be liked by its poster");
+        eosio::check( it_msgs->user != user, "message can't be liked by its poster");
 
         // If a user has already liked a post, liking it again is treated as unlike
-        bool liked = false;
-        auto idx_msgid = likes.get_index<"by.msgid"_n>();
+        auto idx = likes.get_index<"by.secondary"_n>();
+        auto it_likes = idx.find(create_key(msgId, user));
 
-        for (auto it = idx_msgid.begin(); it != idx_msgid.end(); it++) {
-            if (it->user == user) {
-                liked = true;
-                idx_msgid.erase(it);
-                msgs.modify(itr, user, [&](auto& message) {
-                    message.likes_num--;
-                });
-                break;
-            }
-        }
-
-        if (!liked) {
+        if (it_likes != idx.end()) {
+            idx.erase(it_likes);
+            msgs.modify(it_msgs, user, [&](auto& message) {
+                message.likes_num--;
+            });
+        } else {
             // Record the message
             likes.emplace(get_self(), [&](auto& msglikes) {
                 msglikes.id     = id;
                 msglikes.user   = user;
                 msglikes.msgId  = msgId;
             });
-            msgs.modify(itr, user, [&](auto& message) {
+            msgs.modify(it_msgs, user, [&](auto& message) {
                 message.likes_num++;
             });
         }

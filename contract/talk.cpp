@@ -103,4 +103,8 @@ class talk : eosio::contract {
             });
         }
     }
+
+    [[eosio::action]] void checklikes(uint64_t msgId, uint64_t num) {
+        eosio::check(msgs.get(msgId).likes_num == num, "wrong likes number");
+    }
 };

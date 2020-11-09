@@ -70,6 +70,14 @@ BOOST_AUTO_TEST_CASE(post_and_like) try {
         ("user", "jane")       //
     );
 
+    //Check likes num is 1
+    t.push_action(
+        N(talk), N(checklikes), N(jane),
+        mutable_variant_object //
+        ("msgId", 1)        //
+        ("num", 1)       //
+    );
+
     // Unlike
     t.push_action(
         N(talk), N(like), N(jane),
@@ -77,6 +85,14 @@ BOOST_AUTO_TEST_CASE(post_and_like) try {
         ("id", 2)              //
         ("msgId", 1)        //
         ("user", "jane")       //
+    );
+
+    //Check likes num is 0
+    t.push_action(
+        N(talk), N(checklikes), N(jane),
+        mutable_variant_object //
+        ("msgId", 1)        //
+        ("num", 0)       //
     );
 
     // Can't reply to non-existing message
@@ -89,6 +105,19 @@ BOOST_AUTO_TEST_CASE(post_and_like) try {
                 ("reply_to", 99)             //
                 ("user", "john")             //
                 ("content", "post 3: reply") //
+            );
+        }(),
+        fc::exception);
+
+    // Can't like as another user
+    BOOST_CHECK_THROW(
+        [&] {
+            t.push_action(
+                N(talk), N(like), N(jane),
+                mutable_variant_object //
+                ("id", 1)              //
+                ("msgId", 1)        //
+                ("user", "john")       //
             );
         }(),
         fc::exception);
@@ -112,7 +141,7 @@ BOOST_AUTO_TEST_CASE(post_and_like) try {
             t.push_action(
                 N(talk), N(like), N(jane),
                 mutable_variant_object //
-                ("id", 2)              //
+                ("id", 1)              //
                 ("msgId", 1)        //
                 ("user", "jane")       //
             );

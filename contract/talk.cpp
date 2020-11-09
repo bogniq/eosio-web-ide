@@ -80,10 +80,12 @@ class talk : eosio::contract {
 
         // If a user has already liked a post, liking it again is treated as unlike
         bool liked = false;
-        for (auto& item : likes) {
-            if (item.msgId == msgId && item.user == user) {
+        auto idx_msgid = likes.get_index<"by.msgid"_n>();
+
+        for (auto it = idx_msgid.begin(); it != idx_msgid.end(); it++) {
+            if (it->user == user) {
                 liked = true;
-                likes.erase(item);
+                idx_msgid.erase(it);
                 msgs.modify(itr, user, [&](auto& message) {
                     message.likes_num--;
                 });

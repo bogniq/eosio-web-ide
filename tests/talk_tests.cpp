@@ -23,6 +23,7 @@ BOOST_AUTO_TEST_CASE(post_and_like) try {
     // Create users
     t.create_account(N(john));
     t.create_account(N(jane));
+    t.create_account(N(bob));
 
     // Test "post" action
     t.push_action(
@@ -65,7 +66,7 @@ BOOST_AUTO_TEST_CASE(post_and_like) try {
     t.push_action(
         N(talk), N(like), N(jane),
         mutable_variant_object //
-        ("id", 1)              //
+        ("id", 0)              //
         ("msgId", 1)        //
         ("user", "jane")       //
     );
@@ -78,21 +79,38 @@ BOOST_AUTO_TEST_CASE(post_and_like) try {
         ("num", 1)       //
     );
 
-    // Unlike
+    //Another "like" action
     t.push_action(
-        N(talk), N(like), N(jane),
+        N(talk), N(like), N(bob),
         mutable_variant_object //
-        ("id", 2)              //
+        ("id", 0)              //
         ("msgId", 1)        //
-        ("user", "jane")       //
+        ("user", "bob")       //
     );
 
-    //Check likes num is 0
+    //Check likes num is 2
     t.push_action(
         N(talk), N(checklikes), N(jane),
         mutable_variant_object //
         ("msgId", 1)        //
-        ("num", 0)       //
+        ("num", 2)       //
+    );
+
+    // Unlike
+    t.push_action(
+        N(talk), N(like), N(jane),
+        mutable_variant_object //
+        ("id", 1)              // id can not be 0; otherwise Duplicate transaction error
+        ("msgId", 1)        //
+        ("user", "jane")       //
+    );
+
+    //Check likes num is 1
+    t.push_action(
+        N(talk), N(checklikes), N(bob), // user can not be jane; otherwise Duplicate transaction error
+        mutable_variant_object //
+        ("msgId", 1)        //
+        ("num", 1)       //
     );
 
     // Can't reply to non-existing message

@@ -92,7 +92,7 @@ class talk : eosio::contract {
                 message.likes_num--;
             });
         } else {
-            // Record the message
+            // Record the likes
             likes.emplace(get_self(), [&](auto& msglikes) {
                 msglikes.id     = id;
                 msglikes.user   = user;
